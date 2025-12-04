@@ -1625,9 +1625,15 @@
                                 }
                                 
                                 // 检查响应数据是否包含必要字段
-                                if (!data || (!data.imageUrl && adminToken)) {
+                                if (!data) {
                                     console.error('响应数据:', data);
                                     throw new Error('服务器响应缺少必要数据');
+                                }
+                                
+                                // 对于管理员用户，检查imageUrl是否存在
+                                if (adminToken && !data.imageUrl) {
+                                    console.error('管理员响应数据:', data);
+                                    throw new Error('管理员上传失败，未返回图片URL');
                                 }
                                 
                                 // 对于非管理员用户，只需要检查success字段
