@@ -1,26 +1,8 @@
 {
   "version": 2,
-  "functions": {
-    "api/*.js": {
-      "runtime": "@vercel/node"
-    }
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1.js"
-    },
-    {
-      "src": "/img/(.*)",
-      "dest": "/img/$1"
-    },
-    {
-      "src": "/(.*\\.(html|css|js|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1.js" },
+    { "source": "/img/(.*)", "destination": "/img/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
