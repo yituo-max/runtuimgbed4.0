@@ -45,7 +45,7 @@
 
         /* 主页面背景样式 */
         #mainPage {
-            background-image: url('./img/admin_bgd/1.jpg');
+            background-image: url('/img/admin_bgd/1.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -751,7 +751,7 @@
         }
 
         #loginPage {
-            background-image: url('./img/admin_bgd/1.jpg');
+            background-image: url('/img/admin_bgd/1.jpg');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
@@ -1284,8 +1284,20 @@
 
                 // 测试API按钮事件
                 testBtn.addEventListener('click', function() {
-                    fetch('/api/test')
-                        .then(response => response.json())
+                    // 使用完整的URL路径
+                    const apiUrl = window.location.origin + '/api/test';
+                    console.log('Testing API at:', apiUrl);
+                    
+                    fetch(apiUrl)
+                        .then(response => {
+                            console.log('Response status:', response.status);
+                            console.log('Response headers:', response.headers);
+                            
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
                         .then(data => {
                             showNotification('API测试成功: ' + data.message, 'success');
                             console.log('API Test Response:', data);
