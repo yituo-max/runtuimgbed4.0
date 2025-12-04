@@ -1635,9 +1635,15 @@
                                 }
                                 
                                 // 检查响应数据是否包含必要字段
-                                if (!data || !data.imageUrl) {
+                                if (!data || (!data.imageUrl && adminToken)) {
                                     console.error('响应数据:', data);
                                     throw new Error('服务器响应缺少必要数据');
+                                }
+                                
+                                // 对于非管理员用户，只需要检查success字段
+                                if (!data.success) {
+                                    console.error('响应数据:', data);
+                                    throw new Error('上传失败');
                                 }
                                 
                                 // 确保进度条显示100%
@@ -1646,65 +1652,73 @@
                                 document.getElementById('progressText').textContent = '100%';
                                 
                                 // 显示结果
-                                setTimeout(() => {
-                                    // 隐藏进度条，恢复上传内容
-                                    uploadProgress.style.display = 'none';
-                                    uploadContent.style.display = 'flex';
-                                    progressContainer.style.display = 'none';
-                                    resultContainer.style.display = 'block';
-                                    
-                                    resultImage.src = data.imageUrl;
-                                    
-                                    // 重置预览图片
-                                    previewImage.src = '';
-                                    previewContainer.style.display = 'none';
-                                    
-                                    // 只有管理员才能看到URL
-                                    if (adminToken) {
-                                        directUrl.value = data.imageUrl;
-                                        markdownUrl.value = `![图片](${data.imageUrl})`;
-                                        htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
+                                    setTimeout(() => {
+                                        // 隐藏进度条，恢复上传内容
+                                        uploadProgress.style.display = 'none';
+                                        uploadContent.style.display = 'flex';
+                                        progressContainer.style.display = 'none';
+                                        resultContainer.style.display = 'block';
                                         
-                                        // 显示URL容器
-                                        document.querySelectorAll('.url-container').forEach(container => {
-                                            container.style.display = 'block';
-                                        });
-                                    } else {
-                                        // 隐藏URL容器
-                                        document.querySelectorAll('.url-container').forEach(container => {
-                                            container.style.display = 'none';
-                                        });
+                                        // 只有管理员才能看到图片URL和预览
+                                        if (adminToken && data.imageUrl) {
+                                            resultImage.src = data.imageUrl;
+                                            directUrl.value = data.imageUrl;
+                                            markdownUrl.value = `![图片](${data.imageUrl})`;
+                                            htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
+                                            
+                                            // 显示URL容器
+                                            document.querySelectorAll('.url-container').forEach(container => {
+                                                container.style.display = 'block';
+                                            });
+                                        } else {
+                                            // 隐藏图片预览和URL容器
+                                            resultImage.style.display = 'none';
+                                            document.querySelectorAll('.url-container').forEach(container => {
+                                                container.style.display = 'none';
+                                            });
+                                            
+                                            // 显示提示信息
+                                            const urlContainers = document.querySelector('.result-container');
+                                            const tipElement = document.createElement('div');
+                                            tipElement.className = 'url-tip';
+                                            tipElement.style.textAlign = 'center';
+                                            tipElement.style.padding = '15px';
+                                            tipElement.style.color = 'var(--text-secondary)';
+                                            tipElement.textContent = data.message || '图片上传成功！登录后可查看图片链接';
+                                            urlContainers.appendChild(tipElement);
+                                        }
                                         
-                                        // 显示提示信息
-                                        const urlContainers = document.querySelector('.result-container');
-                                        const tipElement = document.createElement('div');
-                                        tipElement.className = 'url-tip';
-                                        tipElement.style.textAlign = 'center';
-                                        tipElement.style.padding = '15px';
-                                        tipElement.style.color = 'var(--text-secondary)';
-                                        tipElement.textContent = '图片上传成功！登录后可查看图片链接';
-                                        urlContainers.appendChild(tipElement);
-                                    }
+                                        // 重置预览图片
+                                        previewImage.src = '';
+                                        previewContainer.style.display = 'none';
                                     
-                                    // 保存图片到图片库
-                                    const imageData = {
-                                        id: data.fileId || Date.now().toString(),
-                                        url: data.imageUrl,
-                                        name: file.name,
-                                        size: file.size,
-                                        type: file.type,
-                                        category: selectedCategory,
-                                        uploadTime: new Date().toISOString()
-                                    };
-                                    
-                                    imageGallery.unshift(imageData);
-                                    saveDataToStorage();
+                                    // 只有管理员才保存图片到图片库
+                                        if (adminToken && data.imageUrl) {
+                                            // 保存图片到图片库
+                                            const imageData = {
+                                                id: data.fileId || Date.now().toString(),
+                                                url: data.imageUrl,
+                                                name: file.name,
+                                                size: file.size,
+                                                type: file.type,
+                                                category: selectedCategory,
+                                                uploadTime: new Date().toISOString()
+                                            };
+                                            
+                                            imageGallery.unshift(imageData);
+                                            saveDataToStorage();
+                                        }
                                     
                                     // 重置上传状态
                                     isUploading = false;
                                     if (uploadBtn) uploadBtn.disabled = false;
                                     
-                                    showNotification('图片上传成功并已保存到图片库', 'success');
+                                    // 根据用户类型显示不同的通知
+                                    if (adminToken) {
+                                        showNotification('图片上传成功并已保存到图片库', 'success');
+                                    } else {
+                                        showNotification('图片上传成功！登录后可查看图片链接', 'success');
+                                    }
                                 }, 500);
                             } else {
                                 throw new Error(`HTTP error! status: ${xhr.status}`);
@@ -1749,6 +1763,12 @@
                     
                     // 发送请求
                     xhr.open('POST', '/api/upload');
+                    
+                    // 添加认证头（如果有token）
+                    if (adminToken && !adminToken.startsWith('local-admin-token-')) {
+                        xhr.setRequestHeader('Authorization', `Bearer ${adminToken}`);
+                    }
+                    
                     xhr.send(formData);
                 }
 

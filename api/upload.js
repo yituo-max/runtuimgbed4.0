@@ -56,10 +56,15 @@ module.exports = async (req, res) => {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
     
-    // 验证管理员权限
-    const authResult = verifyAdminToken(req);
-    if (!authResult.valid) {
-        return res.status(authResult.statusCode).json({ error: authResult.error });
+    // 验证管理员权限（可选，用于获取图片URL）
+    let isAdmin = false;
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        const authResult = verifyAdminToken(req);
+        if (authResult.valid) {
+            isAdmin = true;
+        }
     }
 
     // 获取客户端ID进行频率限制
@@ -133,9 +138,10 @@ module.exports = async (req, res) => {
         // 返回结果
         return res.status(200).json({
             success: true,
-            imageUrl: imageUrl,
+            imageUrl: isAdmin ? imageUrl : null, // 只有管理员才能看到图片URL
             fileId: fileId,
-            fileSize: file.file_size
+            fileSize: file.file_size,
+            message: isAdmin ? 'Image uploaded successfully' : 'Image uploaded successfully but URL is only available to administrators'
         });
     } catch (error) {
         if (isDev) {
