@@ -2149,6 +2149,7 @@
                                         
                                         if (action === 'move') {
                                             const imageId = this.getAttribute('data-id');
+                                            console.log('Moving image with ID:', imageId); // 添加调试日志
                                             showMoveToFolderDialog(imageId);
                                         } else if (action === 'copy') {
                                             const url = this.getAttribute('data-url');
@@ -2429,6 +2430,8 @@
                 
                 // 显示移动到文件夹对话框
                 function showMoveToFolderDialog(imageId) {
+                    console.log('showMoveToFolderDialog called with imageId:', imageId); // 调试日志
+                    
                     // 创建覆盖层
                     const overlay = document.createElement('div');
                     overlay.className = 'folder-dialog-overlay';
@@ -2459,7 +2462,7 @@
                     overlay.appendChild(dialog);
                     
                     // 添加文件夹选项
-                    const folderList = dialog.querySelector('.folder-list');
+                    const folderListElement = dialog.querySelector('.folder-list');
                     function addFolderOptions(folderList, level = 0) {
                         folderList.forEach(folder => {
                             const option = document.createElement('div');
@@ -2473,7 +2476,7 @@
                                 <span class="folder-option-name">${folder.name}</span>
                                 <span class="folder-option-count">${imageCount} 张图片</span>
                             `;
-                            folderList.appendChild(option);
+                            folderListElement.appendChild(option);
                             
                             // 递归添加子文件夹
                             const children = getChildFolders(folder.id);
@@ -2489,6 +2492,7 @@
                     
                     // 添加到页面
                     document.body.appendChild(overlay);
+                    console.log('Dialog added to page'); // 调试日志
                     
                     // 选择文件夹事件
                     let selectedFolderId = '';
@@ -2499,6 +2503,7 @@
                             });
                             this.classList.add('selected');
                             selectedFolderId = this.getAttribute('data-folder-id');
+                            console.log('Selected folder ID:', selectedFolderId); // 调试日志
                         });
                     });
                     
@@ -2514,14 +2519,13 @@
                     
                     // 确认移动按钮事件
                     document.getElementById('confirmMoveBtn').addEventListener('click', function() {
-                        if (selectedFolderId !== undefined) {
-                            const image = imageGallery.find(img => img.id === imageId);
-                            if (image) {
-                                image.folderId = selectedFolderId === '' ? null : selectedFolderId;
-                                saveDataToStorage();
-                                renderGallery();
-                                showNotification('图片已移动到文件夹', 'success');
-                            }
+                        console.log('Confirm move clicked, selectedFolderId:', selectedFolderId); // 调试日志
+                        const image = imageGallery.find(img => img.id === imageId);
+                        if (image) {
+                            image.folderId = selectedFolderId === '' ? null : selectedFolderId;
+                            saveDataToStorage();
+                            renderGallery();
+                            showNotification('图片已移动到文件夹', 'success');
                         }
                         document.body.removeChild(overlay);
                     });
