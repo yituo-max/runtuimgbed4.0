@@ -88,10 +88,7 @@ module.exports = async (req, res) => {
             uploadDir: '/tmp',
             keepExtensions: true,
             maxFileSize: 5 * 1024 * 1024, // 5MB
-            multiples: false,
-            // 添加更多配置以确保在Vercel环境中正常工作
-            hash: false,
-            enabledPlugins: ['multipart']
+            multiples: false
         });
         
         console.log('Parsing form data...');
