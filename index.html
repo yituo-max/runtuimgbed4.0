@@ -1022,32 +1022,10 @@
                     
                     <div class="drop-zone" id="dropZone">
                         <input type="file" id="fileInput" class="file-input" accept="image/*">
-                        <div class="cross-icon"></div>
                         
                         <!-- 图片预览容器 -->
                         <div class="preview-container" id="previewContainer" style="display: none;">
                             <img id="previewImage" class="preview-image" alt="预览图片">
-                            <div class="preview-info">点击上传或拖拽新图片替换</div>
-                        </div>
-                        
-                        <!-- 上传按钮和提示 -->
-                        <div class="upload-content">
-                            <div class="upload-icon">📤</div>
-                            <div class="upload-text">拖拽图片到此处或点击上传</div>
-                            <div class="upload-buttons">
-                                <button class="btn btn-primary" id="uploadBtn">选择图片</button>
-                            </div>
-                        </div>
-                        
-                        <!-- 上传进度条 -->
-                        <div class="upload-progress" id="uploadProgress" style="display: none;">
-                            <div class="progress-info">
-                                <span>上传中...</span>
-                                <span id="progressPercent">0%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress" id="progressBar"></div>
-                            </div>
                         </div>
                     </div>
 
@@ -1316,7 +1294,6 @@
                 // DOM元素
                 const dropZone = document.getElementById('dropZone');
                 const fileInput = document.getElementById('fileInput');
-                const uploadBtn = document.getElementById('uploadBtn');
                 const testBtn = document.getElementById('testBtn');
                 const progressContainer = document.getElementById('progressContainer');
                 const progressBar = document.getElementById('progressBar');
@@ -1449,31 +1426,6 @@
                         });
                 });
 
-                // 点击上传按钮触发文件选择
-                if (uploadBtn) {
-                    uploadBtn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (isUploading) {
-                            showNotification('正在上传中，请稍候...', 'warning');
-                            return;
-                        }
-                        
-                        if (isFileDialogOpen) {
-                            console.log('File dialog already open, ignoring click');
-                            return;
-                        }
-                        
-                        console.log('Upload button clicked, triggering file selection');
-                        isFileDialogOpen = true;
-                        fileInput.click();
-                        
-                        setTimeout(() => {
-                            isFileDialogOpen = false;
-                        }, 300);
-                    });
-                }
-
                 // 点击拖放区域触发文件选择
                 dropZone.addEventListener('click', function(e) {
                     // 如果点击的是预览容器，不触发文件选择
@@ -1481,9 +1433,6 @@
                         return;
                     }
                     
-                    if (uploadBtn && (e.target === uploadBtn || uploadBtn.contains(e.target))) {
-                        return;
-                    }
                     if (testBtn && (e.target === testBtn || testBtn.contains(e.target))) {
                         return;
                     }
@@ -1611,24 +1560,15 @@
                     // 添加category参数，固定为'other'
                     formData.append('category', 'other');
 
-                    // 显示上传区域内的进度条
-                    const uploadProgress = document.getElementById('uploadProgress');
+                    // 显示进度条
                     const progressBar = document.getElementById('progressBar');
-                    const progressPercent = document.getElementById('progressPercent');
-                    const uploadContent = document.querySelector('.upload-content');
                     
-                    // 隐藏上传内容，显示进度条
-                    uploadContent.style.display = 'none';
-                    uploadProgress.style.display = 'block';
-                    
-                    // 同时显示外部的进度条
+                    // 显示进度条
                     progressContainer.style.display = 'block';
                     resultContainer.style.display = 'none';
-                    if (uploadBtn) uploadBtn.disabled = true;
                     
                     // 重置进度条
                     progressBar.style.width = '0%';
-                    progressPercent.textContent = '0%';
                     document.getElementById('progressText').textContent = '0%';
 
                     // 创建XMLHttpRequest以跟踪上传进度
@@ -1639,7 +1579,6 @@
                         if (e.lengthComputable) {
                             const percentComplete = (e.loaded / e.total) * 100;
                             progressBar.style.width = percentComplete + '%';
-                            progressPercent.textContent = Math.round(percentComplete) + '%';
                             document.getElementById('progressText').textContent = Math.round(percentComplete) + '%';
                         }
                     });
@@ -1682,16 +1621,13 @@
                                 
                                 // 确保进度条显示100%
                                 progressBar.style.width = '100%';
-                                progressPercent.textContent = '100%';
                                 document.getElementById('progressText').textContent = '100%';
                                 
                                 // 显示结果
-                                    setTimeout(() => {
-                                        // 隐藏进度条，恢复上传内容
-                                        uploadProgress.style.display = 'none';
-                                        uploadContent.style.display = 'flex';
-                                        progressContainer.style.display = 'none';
-                                        resultContainer.style.display = 'block';
+                                setTimeout(() => {
+                                    // 隐藏进度条
+                                    progressContainer.style.display = 'none';
+                                    resultContainer.style.display = 'block';
                                         
                                         // 只有管理员才能看到图片URL和预览
                                         if (adminToken && data.imageUrl) {
@@ -1745,7 +1681,6 @@
                                     
                                     // 重置上传状态
                                     isUploading = false;
-                                    if (uploadBtn) uploadBtn.disabled = false;
                                     
                                     // 根据用户类型显示不同的通知
                                     if (adminToken) {
@@ -1761,9 +1696,7 @@
                             console.error('上传处理错误:', error);
                             console.error('响应内容:', xhr.responseText);
                             
-                            // 隐藏进度条，恢复上传内容
-                            uploadProgress.style.display = 'none';
-                            uploadContent.style.display = 'flex';
+                            // 隐藏进度条
                             progressContainer.style.display = 'none';
                             
                             // 重置预览图片
@@ -1772,7 +1705,6 @@
                             
                             // 重置上传状态
                             isUploading = false;
-                            if (uploadBtn) uploadBtn.disabled = false;
                             
                             showNotification(`上传失败: ${error.message}`, 'error');
                         }
@@ -1780,9 +1712,7 @@
                     
                     // 请求错误
                     xhr.addEventListener('error', function() {
-                        // 隐藏进度条，恢复上传内容
-                        uploadProgress.style.display = 'none';
-                        uploadContent.style.display = 'flex';
+                        // 隐藏进度条
                         progressContainer.style.display = 'none';
                         
                         // 重置预览图片
@@ -1790,7 +1720,6 @@
                         previewContainer.style.display = 'none';
                         
                         isUploading = false;
-                        if (uploadBtn) uploadBtn.disabled = false;
                         console.error('Upload error');
                         showNotification('上传失败，请重试', 'error');
                     });
