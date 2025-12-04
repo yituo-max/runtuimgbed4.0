@@ -124,16 +124,19 @@ module.exports = async (req, res) => {
         // 构建图片URL
         const imageUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResponse.result.file_path}`;
         
-        // 保存图片信息到数据库
-        const imageInfo = {
-            filename: imageFile.name,
-            url: imageUrl,
-            size: file.file_size,
-            fileId: fileId,
-            category: req.body.category || 'general'
-        };
-        
-        const savedImage = addImage(imageInfo);
+        // 保存图片信息到数据库（只有管理员才保存）
+        let savedImage = null;
+        if (isAdmin) {
+            const imageInfo = {
+                filename: imageFile.name,
+                url: imageUrl,
+                size: file.file_size,
+                fileId: fileId,
+                category: req.body.category || 'general'
+            };
+            
+            savedImage = addImage(imageInfo);
+        }
         
         // 返回结果
         return res.status(200).json({

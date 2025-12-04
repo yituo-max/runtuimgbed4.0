@@ -1291,7 +1291,7 @@
                 const notification = document.getElementById('notification');
                 const notificationText = document.getElementById('notificationText');
                 const notificationIcon = document.getElementById('notificationIcon');
-                const categorySelect = document.getElementById('categorySelect');
+
                 const galleryGrid = document.getElementById('galleryGrid');
                 const emptyState = document.getElementById('emptyState');
                 const searchInput = document.getElementById('searchInput');
@@ -1340,15 +1340,6 @@
 
                 // 更新分类选择器
                 function updateCategorySelects() {
-                    // 更新上传页面的分类选择器
-                    categorySelect.innerHTML = '<option value="">默认分类</option>';
-                    categories.forEach(category => {
-                        const option = document.createElement('option');
-                        option.value = category;
-                        option.textContent = getCategoryDisplayName(category);
-                        categorySelect.appendChild(option);
-                    });
-
                     // 更新图片库页面的分类筛选器
                     filterCategory.innerHTML = '<option value="">所有分类</option>';
                     categories.forEach(category => {
@@ -1579,9 +1570,8 @@
                     
                     const formData = new FormData();
                     formData.append('image', file);
-                    
-                    // 获取选中的分类
-                    const selectedCategory = categorySelect.value || 'other';
+                    // 添加category参数，固定为'other'
+                    formData.append('category', 'other');
 
                     // 显示上传区域内的进度条
                     const uploadProgress = document.getElementById('uploadProgress');
@@ -1701,7 +1691,7 @@
                                                 name: file.name,
                                                 size: file.size,
                                                 type: file.type,
-                                                category: selectedCategory,
+                                                category: 'other',
                                                 uploadTime: new Date().toISOString()
                                             };
                                             

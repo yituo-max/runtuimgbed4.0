@@ -2,7 +2,7 @@ const crypto = require('crypto');
 
 // 管理员凭据（在实际生产环境中应该使用环境变量）
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME || 'admin';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin123';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '520911zxc';
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
 
 // 生成JWT令牌
