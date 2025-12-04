@@ -2,7 +2,7 @@ const https = require('https');
 const querystring = require('querystring');
 const { verifyAdminToken } = require('./auth-middleware');
 const { addImage } = require('./images');
-const formidable = require('formidable');
+const { IncomingForm } = require('formidable');
 
 // 从环境变量获取配置
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -84,16 +84,26 @@ module.exports = async (req, res) => {
 
     try {
         // 使用formidable解析multipart/form-data
-        const form = formidable({});
+        const form = new IncomingForm({
+            uploadDir: '/tmp',
+            keepExtensions: true,
+            maxFileSize: 5 * 1024 * 1024, // 5MB
+        });
         
-        const [fields, files] = await form.parse(req);
+        // 使用Promise包装formidable解析
+        const { fields, files } = await new Promise((resolve, reject) => {
+            form.parse(req, (err, fields, files) => {
+                if (err) reject(err);
+                else resolve({ fields, files });
+            });
+        });
         
         // 检查是否有文件上传
-        if (!files.image || files.image.length === 0) {
+        if (!files.image) {
             return res.status(400).json({ error: 'No image provided' });
         }
 
-        const imageFile = files.image[0];
+        const imageFile = files.image;
         
         // 检查文件大小（限制为5MB）
         const maxSize = 5 * 1024 * 1024; // 5MB
@@ -146,11 +156,10 @@ module.exports = async (req, res) => {
         let savedImage = null;
         if (isAdmin) {
             // 获取分类字段
-            const category = fields.category && fields.category.length > 0 ? 
-                             fields.category[0] : 'general';
+            const category = fields.category || 'general';
             
             const imageInfo = {
-                filename: processedFile.name,
+                filename: imageFile.originalFilename,
                 url: imageUrl,
                 size: file.file_size,
                 fileId: fileId,
