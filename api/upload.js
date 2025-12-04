@@ -115,14 +115,25 @@ module.exports = async (req, res) => {
 
         // 读取文件数据
         const fs = require('fs');
-        const imageBuffer = fs.readFileSync(imageFile.filepath);
+        
+        // 检查文件路径是否存在
+        if (!imageFile.filepath && !imageFile.path) {
+            return res.status(500).json({ 
+                error: 'File path not found',
+                details: 'The uploaded file does not have a valid path'
+            });
+        }
+        
+        // 使用filepath或path属性（不同版本的formidable可能使用不同的属性名）
+        const filePath = imageFile.filepath || imageFile.path;
+        const imageBuffer = fs.readFileSync(filePath);
         
         // 创建一个类似multer的对象
         const processedFile = {
-            name: imageFile.originalFilename,
+            name: imageFile.originalFilename || imageFile.name,
             data: imageBuffer,
             size: imageFile.size,
-            mimetype: imageFile.mimetype
+            mimetype: imageFile.mimetype || imageFile.type
         };
 
         // 上传图片到Telegram
@@ -159,7 +170,7 @@ module.exports = async (req, res) => {
             const category = fields.category || 'general';
             
             const imageInfo = {
-                filename: imageFile.originalFilename,
+                filename: imageFile.originalFilename || imageFile.name,
                 url: imageUrl,
                 size: file.file_size,
                 fileId: fileId,
