@@ -88,22 +88,36 @@ module.exports = async (req, res) => {
             uploadDir: '/tmp',
             keepExtensions: true,
             maxFileSize: 5 * 1024 * 1024, // 5MB
+            multiples: false,
+            // 添加更多配置以确保在Vercel环境中正常工作
+            hash: false,
+            enabledPlugins: ['multipart']
         });
+        
+        console.log('Parsing form data...');
         
         // 使用Promise包装formidable解析
         const { fields, files } = await new Promise((resolve, reject) => {
             form.parse(req, (err, fields, files) => {
-                if (err) reject(err);
-                else resolve({ fields, files });
+                if (err) {
+                    console.error('Form parse error:', err);
+                    reject(err);
+                } else {
+                    console.log('Form parsed successfully');
+                    console.log('Fields:', JSON.stringify(fields, null, 2));
+                    console.log('Files:', JSON.stringify(files, null, 2));
+                    resolve({ fields, files });
+                }
             });
         });
         
         // 检查是否有文件上传
-        if (!files.image) {
+        if (!files.image || files.image.length === 0) {
             return res.status(400).json({ error: 'No image provided' });
         }
 
-        const imageFile = files.image;
+        // files.image是一个数组，取第一个元素
+        const imageFile = files.image[0];
         
         // 添加调试信息
         console.log('Image file object:', JSON.stringify(imageFile, null, 2));
@@ -144,7 +158,7 @@ module.exports = async (req, res) => {
         
         // 创建一个类似multer的对象
         const processedFile = {
-            name: imageFile.originalFilename || imageFile.name || 'unknown',
+            name: imageFile.originalFilename || imageFile.newFilename || 'unknown',
             data: imageBuffer,
             size: imageFile.size,
             mimetype: imageFile.mimetype || imageFile.type || 'image/jpeg'
@@ -184,7 +198,7 @@ module.exports = async (req, res) => {
             const category = fields.category || 'general';
             
             const imageInfo = {
-                filename: imageFile.originalFilename || imageFile.name,
+                filename: imageFile.originalFilename || imageFile.newFilename || 'unknown',
                 url: imageUrl,
                 size: file.file_size,
                 fileId: fileId,
@@ -203,12 +217,17 @@ module.exports = async (req, res) => {
             message: isAdmin ? 'Image uploaded successfully' : 'Image uploaded successfully but URL is only available to administrators'
         });
     } catch (error) {
+        // 添加更详细的错误日志
+        console.error('Upload error:', error);
+        console.error('Error stack:', error.stack);
+        
         if (isDev) {
             console.error('Error details:', error);
         }
         return res.status(500).json({ 
             error: 'Internal server error',
-            message: error.message 
+            message: error.message,
+            stack: error.stack
         });
     }
 };
