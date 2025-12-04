@@ -105,6 +105,9 @@ module.exports = async (req, res) => {
 
         const imageFile = files.image;
         
+        // 添加调试信息
+        console.log('Image file object:', JSON.stringify(imageFile, null, 2));
+        
         // 检查文件大小（限制为5MB）
         const maxSize = 5 * 1024 * 1024; // 5MB
         if (imageFile.size > maxSize) {
@@ -116,24 +119,35 @@ module.exports = async (req, res) => {
         // 读取文件数据
         const fs = require('fs');
         
+        // 尝试不同的可能路径属性
+        let filePath = null;
+        if (imageFile.filepath) {
+            filePath = imageFile.filepath;
+        } else if (imageFile.path) {
+            filePath = imageFile.path;
+        } else if (imageFile.file && imageFile.file.path) {
+            filePath = imageFile.file.path;
+        } else if (typeof imageFile === 'string') {
+            filePath = imageFile;
+        }
+        
         // 检查文件路径是否存在
-        if (!imageFile.filepath && !imageFile.path) {
+        if (!filePath) {
             return res.status(500).json({ 
                 error: 'File path not found',
-                details: 'The uploaded file does not have a valid path'
+                details: 'The uploaded file does not have a valid path',
+                objectKeys: Object.keys(imageFile)
             });
         }
         
-        // 使用filepath或path属性（不同版本的formidable可能使用不同的属性名）
-        const filePath = imageFile.filepath || imageFile.path;
         const imageBuffer = fs.readFileSync(filePath);
         
         // 创建一个类似multer的对象
         const processedFile = {
-            name: imageFile.originalFilename || imageFile.name,
+            name: imageFile.originalFilename || imageFile.name || 'unknown',
             data: imageBuffer,
             size: imageFile.size,
-            mimetype: imageFile.mimetype || imageFile.type
+            mimetype: imageFile.mimetype || imageFile.type || 'image/jpeg'
         };
 
         // 上传图片到Telegram
