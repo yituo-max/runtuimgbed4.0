@@ -133,7 +133,9 @@ module.exports = async (req, res) => {
         // 返回结果
         return res.status(200).json({
             success: true,
-            image: savedImage
+            imageUrl: imageUrl,
+            fileId: fileId,
+            fileSize: file.file_size
         });
     } catch (error) {
         if (isDev) {

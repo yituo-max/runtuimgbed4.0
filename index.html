@@ -1571,77 +1571,115 @@
                     
                     // 请求完成
                     xhr.addEventListener('load', function() {
-                        if (xhr.status >= 200 && xhr.status < 300) {
-                            const data = JSON.parse(xhr.responseText);
-                            
-                            // 确保进度条显示100%
-                            progressBar.style.width = '100%';
-                            progressPercent.textContent = '100%';
-                            document.getElementById('progressText').textContent = '100%';
-                            
-                            // 显示结果
-                            setTimeout(() => {
-                                // 隐藏进度条，恢复上传内容
-                                uploadProgress.style.display = 'none';
-                                uploadContent.style.display = 'flex';
-                                progressContainer.style.display = 'none';
-                                resultContainer.style.display = 'block';
-                                
-                                resultImage.src = data.imageUrl;
-                                
-                                // 重置预览图片
-                                previewImage.src = '';
-                                previewContainer.style.display = 'none';
-                                
-                                // 只有管理员才能看到URL
-                                if (adminToken) {
-                                    directUrl.value = data.imageUrl;
-                                    markdownUrl.value = `![图片](${data.imageUrl})`;
-                                    htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
-                                    
-                                    // 显示URL容器
-                                    document.querySelectorAll('.url-container').forEach(container => {
-                                        container.style.display = 'block';
-                                    });
-                                } else {
-                                    // 隐藏URL容器
-                                    document.querySelectorAll('.url-container').forEach(container => {
-                                        container.style.display = 'none';
-                                    });
-                                    
-                                    // 显示提示信息
-                                    const urlContainers = document.querySelector('.result-container');
-                                    const tipElement = document.createElement('div');
-                                    tipElement.className = 'url-tip';
-                                    tipElement.style.textAlign = 'center';
-                                    tipElement.style.padding = '15px';
-                                    tipElement.style.color = 'var(--text-secondary)';
-                                    tipElement.textContent = '图片上传成功！登录后可查看图片链接';
-                                    urlContainers.appendChild(tipElement);
+                        try {
+                            if (xhr.status >= 200 && xhr.status < 300) {
+                                // 检查响应是否存在且不为空
+                                if (!xhr.responseText || xhr.responseText.trim() === '') {
+                                    throw new Error('服务器返回空响应');
                                 }
                                 
-                                // 保存图片到图片库
-                                const imageData = {
-                                    id: data.fileId || Date.now().toString(),
-                                    url: data.imageUrl,
-                                    name: file.name,
-                                    size: file.size,
-                                    type: file.type,
-                                    category: selectedCategory,
-                                    uploadTime: new Date().toISOString()
-                                };
+                                let data;
+                                try {
+                                    data = JSON.parse(xhr.responseText);
+                                } catch (parseError) {
+                                    console.error('JSON解析错误:', parseError);
+                                    console.error('响应内容:', xhr.responseText);
+                                    throw new Error('服务器响应格式错误');
+                                }
                                 
-                                imageGallery.unshift(imageData);
-                                saveDataToStorage();
+                                // 检查响应数据是否包含必要字段
+                                if (!data || !data.imageUrl) {
+                                    console.error('响应数据:', data);
+                                    throw new Error('服务器响应缺少必要数据');
+                                }
                                 
-                                // 重置上传状态
-                                isUploading = false;
-                                if (uploadBtn) uploadBtn.disabled = false;
+                                // 确保进度条显示100%
+                                progressBar.style.width = '100%';
+                                progressPercent.textContent = '100%';
+                                document.getElementById('progressText').textContent = '100%';
                                 
-                                showNotification('图片上传成功并已保存到图片库', 'success');
-                            }, 500);
-                        } else {
-                            throw new Error(`HTTP error! status: ${xhr.status}`);
+                                // 显示结果
+                                setTimeout(() => {
+                                    // 隐藏进度条，恢复上传内容
+                                    uploadProgress.style.display = 'none';
+                                    uploadContent.style.display = 'flex';
+                                    progressContainer.style.display = 'none';
+                                    resultContainer.style.display = 'block';
+                                    
+                                    resultImage.src = data.imageUrl;
+                                    
+                                    // 重置预览图片
+                                    previewImage.src = '';
+                                    previewContainer.style.display = 'none';
+                                    
+                                    // 只有管理员才能看到URL
+                                    if (adminToken) {
+                                        directUrl.value = data.imageUrl;
+                                        markdownUrl.value = `![图片](${data.imageUrl})`;
+                                        htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
+                                        
+                                        // 显示URL容器
+                                        document.querySelectorAll('.url-container').forEach(container => {
+                                            container.style.display = 'block';
+                                        });
+                                    } else {
+                                        // 隐藏URL容器
+                                        document.querySelectorAll('.url-container').forEach(container => {
+                                            container.style.display = 'none';
+                                        });
+                                        
+                                        // 显示提示信息
+                                        const urlContainers = document.querySelector('.result-container');
+                                        const tipElement = document.createElement('div');
+                                        tipElement.className = 'url-tip';
+                                        tipElement.style.textAlign = 'center';
+                                        tipElement.style.padding = '15px';
+                                        tipElement.style.color = 'var(--text-secondary)';
+                                        tipElement.textContent = '图片上传成功！登录后可查看图片链接';
+                                        urlContainers.appendChild(tipElement);
+                                    }
+                                    
+                                    // 保存图片到图片库
+                                    const imageData = {
+                                        id: data.fileId || Date.now().toString(),
+                                        url: data.imageUrl,
+                                        name: file.name,
+                                        size: file.size,
+                                        type: file.type,
+                                        category: selectedCategory,
+                                        uploadTime: new Date().toISOString()
+                                    };
+                                    
+                                    imageGallery.unshift(imageData);
+                                    saveDataToStorage();
+                                    
+                                    // 重置上传状态
+                                    isUploading = false;
+                                    if (uploadBtn) uploadBtn.disabled = false;
+                                    
+                                    showNotification('图片上传成功并已保存到图片库', 'success');
+                                }, 500);
+                            } else {
+                                throw new Error(`HTTP error! status: ${xhr.status}`);
+                            }
+                        } catch (error) {
+                            console.error('上传处理错误:', error);
+                            console.error('响应内容:', xhr.responseText);
+                            
+                            // 隐藏进度条，恢复上传内容
+                            uploadProgress.style.display = 'none';
+                            uploadContent.style.display = 'flex';
+                            progressContainer.style.display = 'none';
+                            
+                            // 重置预览图片
+                            previewImage.src = '';
+                            previewContainer.style.display = 'none';
+                            
+                            // 重置上传状态
+                            isUploading = false;
+                            if (uploadBtn) uploadBtn.disabled = false;
+                            
+                            showNotification(`上传失败: ${error.message}`, 'error');
                         }
                     });
                     
