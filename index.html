@@ -283,6 +283,56 @@
             justify-content: center;
             align-items: center;
         }
+        
+        .upload-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            width: 100%;
+        }
+        
+        .upload-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            z-index: 10;
+        }
+        
+        .upload-progress .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-regular);
+        }
+        
+        .upload-progress .progress-bar {
+            height: 8px;
+            background-color: var(--border-lighter);
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .upload-progress .progress {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+            background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+            background-size: 20px 20px;
+            animation: progress-bar-stripes 1s linear infinite;
+        }
 
         .cross-icon {
             position: absolute;
@@ -939,6 +989,26 @@
                     <div class="drop-zone" id="dropZone">
                         <input type="file" id="fileInput" class="file-input" accept="image/*">
                         <div class="cross-icon"></div>
+                        
+                        <!-- 上传按钮和提示 -->
+                        <div class="upload-content">
+                            <div class="upload-icon">📤</div>
+                            <div class="upload-text">拖拽图片到此处或点击上传</div>
+                            <div class="upload-buttons">
+                                <button class="btn btn-primary" id="uploadBtn">选择图片</button>
+                            </div>
+                        </div>
+                        
+                        <!-- 上传进度条 -->
+                        <div class="upload-progress" id="uploadProgress" style="display: none;">
+                            <div class="progress-info">
+                                <span>上传中...</span>
+                                <span id="progressPercent">0%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress" id="progressBar"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="progress-container" id="progressContainer">
@@ -1370,6 +1440,17 @@
                         }
                         console.log('File selected:', fileInput.files[0].name);
                         const selectedFile = fileInput.files[0];
+                        
+                        // 显示预览
+                        if (selectedFile.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImage.src = e.target.result;
+                                previewContainer.style.display = 'block';
+                            };
+                            reader.readAsDataURL(selectedFile);
+                        }
+                        
                         handleFile(selectedFile);
                         setTimeout(() => {
                             fileInput.value = '';
@@ -1399,7 +1480,19 @@
                             console.log('Upload in progress, ignoring dropped file');
                             return;
                         }
-                        handleFile(e.dataTransfer.files[0]);
+                        const file = e.dataTransfer.files[0];
+                        
+                        // 显示预览
+                        if (file.type.startsWith('image/')) {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImage.src = e.target.result;
+                                previewContainer.style.display = 'block';
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                        
+                        handleFile(file);
                     }
                 });
 
@@ -1443,107 +1536,135 @@
                     // 获取选中的分类
                     const selectedCategory = categorySelect.value || 'other';
 
-                    // 显示进度条
+                    // 显示上传区域内的进度条
+                    const uploadProgress = document.getElementById('uploadProgress');
+                    const progressBar = document.getElementById('progressBar');
+                    const progressPercent = document.getElementById('progressPercent');
+                    const uploadContent = document.querySelector('.upload-content');
+                    
+                    // 隐藏上传内容，显示进度条
+                    uploadContent.style.display = 'none';
+                    uploadProgress.style.display = 'block';
+                    
+                    // 同时显示外部的进度条
                     progressContainer.style.display = 'block';
                     resultContainer.style.display = 'none';
                     if (uploadBtn) uploadBtn.disabled = true;
                     
                     // 重置进度条
                     progressBar.style.width = '0%';
-                    progressText.textContent = '0%';
+                    progressPercent.textContent = '0%';
+                    document.getElementById('progressText').textContent = '0%';
 
-                    // 模拟进度更新
-                    let progress = 0;
-                    const progressInterval = setInterval(() => {
-                        progress += Math.random() * 15; // 随机增长，更真实
-                        if (progress > 90) {
-                            progress = 90; // 最多到90%，等待服务器响应
-                            clearInterval(progressInterval);
+                    // 创建XMLHttpRequest以跟踪上传进度
+                    const xhr = new XMLHttpRequest();
+                    
+                    // 监听上传进度
+                    xhr.upload.addEventListener('progress', function(e) {
+                        if (e.lengthComputable) {
+                            const percentComplete = (e.loaded / e.total) * 100;
+                            progressBar.style.width = percentComplete + '%';
+                            progressPercent.textContent = Math.round(percentComplete) + '%';
+                            document.getElementById('progressText').textContent = Math.round(percentComplete) + '%';
                         }
-                        progressBar.style.width = progress + '%';
-                        progressText.textContent = Math.round(progress) + '%';
-                    }, 300);
-
-                    // 发送请求到Vercel函数
-                    fetch('/api/upload', {
-                        method: 'POST',
-                        body: formData
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! status: ${response.status}`);
+                    });
+                    
+                    // 请求完成
+                    xhr.addEventListener('load', function() {
+                        if (xhr.status >= 200 && xhr.status < 300) {
+                            const data = JSON.parse(xhr.responseText);
+                            
+                            // 确保进度条显示100%
+                            progressBar.style.width = '100%';
+                            progressPercent.textContent = '100%';
+                            document.getElementById('progressText').textContent = '100%';
+                            
+                            // 显示结果
+                            setTimeout(() => {
+                                // 隐藏进度条，恢复上传内容
+                                uploadProgress.style.display = 'none';
+                                uploadContent.style.display = 'flex';
+                                progressContainer.style.display = 'none';
+                                resultContainer.style.display = 'block';
+                                
+                                resultImage.src = data.imageUrl;
+                                
+                                // 重置预览图片
+                                previewImage.src = '';
+                                previewContainer.style.display = 'none';
+                                
+                                // 只有管理员才能看到URL
+                                if (adminToken) {
+                                    directUrl.value = data.imageUrl;
+                                    markdownUrl.value = `![图片](${data.imageUrl})`;
+                                    htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
+                                    
+                                    // 显示URL容器
+                                    document.querySelectorAll('.url-container').forEach(container => {
+                                        container.style.display = 'block';
+                                    });
+                                } else {
+                                    // 隐藏URL容器
+                                    document.querySelectorAll('.url-container').forEach(container => {
+                                        container.style.display = 'none';
+                                    });
+                                    
+                                    // 显示提示信息
+                                    const urlContainers = document.querySelector('.result-container');
+                                    const tipElement = document.createElement('div');
+                                    tipElement.className = 'url-tip';
+                                    tipElement.style.textAlign = 'center';
+                                    tipElement.style.padding = '15px';
+                                    tipElement.style.color = 'var(--text-secondary)';
+                                    tipElement.textContent = '图片上传成功！登录后可查看图片链接';
+                                    urlContainers.appendChild(tipElement);
+                                }
+                                
+                                // 保存图片到图片库
+                                const imageData = {
+                                    id: data.fileId || Date.now().toString(),
+                                    url: data.imageUrl,
+                                    name: file.name,
+                                    size: file.size,
+                                    type: file.type,
+                                    category: selectedCategory,
+                                    uploadTime: new Date().toISOString()
+                                };
+                                
+                                imageGallery.unshift(imageData);
+                                saveDataToStorage();
+                                
+                                // 重置上传状态
+                                isUploading = false;
+                                if (uploadBtn) uploadBtn.disabled = false;
+                                
+                                showNotification('图片上传成功并已保存到图片库', 'success');
+                            }, 500);
+                        } else {
+                            throw new Error(`HTTP error! status: ${xhr.status}`);
                         }
-                        return response.json();
-                    })
-                    .then(data => {
-                        clearInterval(progressInterval);
-                        progressBar.style.width = '100%';
-                        progressText.textContent = '100%';
-                        
-                        // 显示结果
-                        setTimeout(() => {
-                            progressContainer.style.display = 'none';
-                            resultContainer.style.display = 'block';
-                            
-                            resultImage.src = data.imageUrl;
-                            
-                            // 只有管理员才能看到URL
-                            if (adminToken) {
-                                directUrl.value = data.imageUrl;
-                                markdownUrl.value = `![图片](${data.imageUrl})`;
-                                htmlUrl.value = `<img src="${data.imageUrl}" alt="图片">`;
-                                
-                                // 显示URL容器
-                                document.querySelectorAll('.url-container').forEach(container => {
-                                    container.style.display = 'block';
-                                });
-                            } else {
-                                // 隐藏URL容器
-                                document.querySelectorAll('.url-container').forEach(container => {
-                                    container.style.display = 'none';
-                                });
-                                
-                                // 显示提示信息
-                                const urlContainers = document.querySelector('.result-container');
-                                const tipElement = document.createElement('div');
-                                tipElement.className = 'url-tip';
-                                tipElement.style.textAlign = 'center';
-                                tipElement.style.padding = '15px';
-                                tipElement.style.color = 'var(--text-secondary)';
-                                tipElement.textContent = '图片上传成功！登录后可查看图片链接';
-                                urlContainers.appendChild(tipElement);
-                            }
-                            
-                            // 保存图片到图片库
-                            const imageData = {
-                                id: data.fileId || Date.now().toString(),
-                                url: data.imageUrl,
-                                name: file.name,
-                                size: file.size,
-                                type: file.type,
-                                category: selectedCategory,
-                                uploadTime: new Date().toISOString()
-                            };
-                            
-                            imageGallery.unshift(imageData);
-                            saveDataToStorage();
-                            
-                            // 重置上传状态
-                            isUploading = false;
-                            if (uploadBtn) uploadBtn.disabled = false;
-                            
-                            showNotification('图片上传成功并已保存到图片库', 'success');
-                        }, 500);
-                    })
-                    .catch(error => {
-                        clearInterval(progressInterval);
+                    });
+                    
+                    // 请求错误
+                    xhr.addEventListener('error', function() {
+                        // 隐藏进度条，恢复上传内容
+                        uploadProgress.style.display = 'none';
+                        uploadContent.style.display = 'flex';
                         progressContainer.style.display = 'none';
+                        
+                        // 重置预览图片
+                        previewImage.src = '';
+                        previewContainer.style.display = 'none';
                         
                         isUploading = false;
                         if (uploadBtn) uploadBtn.disabled = false;
-                        console.error('Upload error:', error);
-                        showNotification('上传失败: ' + error.message, 'error');
+                        console.error('Upload error');
+                        showNotification('上传失败，请重试', 'error');
                     });
+                    
+                    // 发送请求
+                    xhr.open('POST', '/api/upload');
+                    xhr.send(formData);
                 }
 
                 // 渲染图片库
