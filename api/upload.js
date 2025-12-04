@@ -2,6 +2,7 @@ const https = require('https');
 const querystring = require('querystring');
 const { verifyAdminToken } = require('./auth-middleware');
 const { addImage } = require('./images');
+const formidable = require('formidable');
 
 // 从环境变量获取配置
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -82,12 +83,17 @@ module.exports = async (req, res) => {
     }
 
     try {
+        // 使用formidable解析multipart/form-data
+        const form = formidable({});
+        
+        const [fields, files] = await form.parse(req);
+        
         // 检查是否有文件上传
-        if (!req.files || !req.files.image) {
+        if (!files.image || files.image.length === 0) {
             return res.status(400).json({ error: 'No image provided' });
         }
 
-        const imageFile = req.files.image;
+        const imageFile = files.image[0];
         
         // 检查文件大小（限制为5MB）
         const maxSize = 5 * 1024 * 1024; // 5MB
@@ -97,8 +103,20 @@ module.exports = async (req, res) => {
             });
         }
 
+        // 读取文件数据
+        const fs = require('fs');
+        const imageBuffer = fs.readFileSync(imageFile.filepath);
+        
+        // 创建一个类似multer的对象
+        const processedFile = {
+            name: imageFile.originalFilename,
+            data: imageBuffer,
+            size: imageFile.size,
+            mimetype: imageFile.mimetype
+        };
+
         // 上传图片到Telegram
-        const telegramResponse = await uploadToTelegram(imageFile);
+        const telegramResponse = await uploadToTelegram(processedFile);
         
         if (!telegramResponse.ok) {
             return res.status(500).json({ 
@@ -127,12 +145,16 @@ module.exports = async (req, res) => {
         // 保存图片信息到数据库（只有管理员才保存）
         let savedImage = null;
         if (isAdmin) {
+            // 获取分类字段
+            const category = fields.category && fields.category.length > 0 ? 
+                             fields.category[0] : 'general';
+            
             const imageInfo = {
-                filename: imageFile.name,
+                filename: processedFile.name,
                 url: imageUrl,
                 size: file.file_size,
                 fileId: fileId,
-                category: req.body.category || 'general'
+                category: category
             };
             
             savedImage = addImage(imageInfo);
