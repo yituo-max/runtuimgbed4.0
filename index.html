@@ -800,6 +800,36 @@
             justify-content: flex-end;
             gap: 10px;
         }
+        
+        .btn-primary {
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            background-color: #409EFF;
+        }
+        
+        .btn-secondary {
+            padding: 8px 16px;
+            background-color: #f0f0f0;
+            color: var(--text-regular);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
 
         .folder-dialog-btn {
             padding: 8px 16px;
@@ -2399,38 +2429,51 @@
                 
                 // 显示移动到文件夹对话框
                 function showMoveToFolderDialog(imageId) {
+                    // 创建覆盖层
+                    const overlay = document.createElement('div');
+                    overlay.className = 'folder-dialog-overlay';
+                    
                     // 创建文件夹选择对话框
                     const dialog = document.createElement('div');
                     dialog.className = 'folder-dialog';
                     dialog.innerHTML = `
+                        <div class="folder-dialog-header">
+                            <h3 class="folder-dialog-title">选择目标文件夹</h3>
+                            <button class="folder-dialog-close">&times;</button>
+                        </div>
                         <div class="folder-dialog-content">
-                            <h3>选择目标文件夹</h3>
-                            <div class="folder-options">
+                            <div class="folder-list">
                                 <div class="folder-option" data-folder-id="">
-                                    <span class="folder-icon">📁</span>
-                                    <span>根目录</span>
+                                    <span class="folder-option-icon">📁</span>
+                                    <span class="folder-option-name">根目录</span>
                                 </div>
                             </div>
-                            <div class="folder-dialog-actions">
-                                <button id="cancelMoveBtn">取消</button>
-                                <button id="confirmMoveBtn">移动</button>
-                            </div>
+                        </div>
+                        <div class="folder-dialog-footer">
+                            <button id="cancelMoveBtn" class="btn-secondary">取消</button>
+                            <button id="confirmMoveBtn" class="btn-primary">移动</button>
                         </div>
                     `;
                     
+                    // 添加到覆盖层
+                    overlay.appendChild(dialog);
+                    
                     // 添加文件夹选项
-                    const folderOptions = dialog.querySelector('.folder-options');
+                    const folderList = dialog.querySelector('.folder-list');
                     function addFolderOptions(folderList, level = 0) {
                         folderList.forEach(folder => {
                             const option = document.createElement('div');
                             option.className = 'folder-option';
                             option.setAttribute('data-folder-id', folder.id);
-                            option.style.paddingLeft = `${level * 20}px`;
+                            option.style.paddingLeft = `${15 + level * 20}px`;
+                            
+                            const imageCount = getFolderImageCount(folder.id);
                             option.innerHTML = `
-                                <span class="folder-icon">📁</span>
-                                <span>${folder.name}</span>
+                                <span class="folder-option-icon">📁</span>
+                                <span class="folder-option-name">${folder.name}</span>
+                                <span class="folder-option-count">${imageCount} 张图片</span>
                             `;
-                            folderOptions.appendChild(option);
+                            folderList.appendChild(option);
                             
                             // 递归添加子文件夹
                             const children = getChildFolders(folder.id);
@@ -2445,7 +2488,7 @@
                     addFolderOptions(rootFolders);
                     
                     // 添加到页面
-                    document.body.appendChild(dialog);
+                    document.body.appendChild(overlay);
                     
                     // 选择文件夹事件
                     let selectedFolderId = '';
@@ -2459,9 +2502,14 @@
                         });
                     });
                     
+                    // 关闭按钮事件
+                    dialog.querySelector('.folder-dialog-close').addEventListener('click', function() {
+                        document.body.removeChild(overlay);
+                    });
+                    
                     // 取消按钮事件
                     document.getElementById('cancelMoveBtn').addEventListener('click', function() {
-                        document.body.removeChild(dialog);
+                        document.body.removeChild(overlay);
                     });
                     
                     // 确认移动按钮事件
@@ -2475,7 +2523,14 @@
                                 showNotification('图片已移动到文件夹', 'success');
                             }
                         }
-                        document.body.removeChild(dialog);
+                        document.body.removeChild(overlay);
+                    });
+                    
+                    // 点击覆盖层关闭
+                    overlay.addEventListener('click', function(e) {
+                        if (e.target === overlay) {
+                            document.body.removeChild(overlay);
+                        }
                     });
                 }
 
