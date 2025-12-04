@@ -188,11 +188,24 @@ module.exports = async (req, res) => {
         // 构建图片URL
         const imageUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileResponse.result.file_path}`;
         
+        console.log('Image URL:', imageUrl);
+        console.log('Is admin:', isAdmin);
+        console.log('Fields:', JSON.stringify(fields, null, 2));
+        
         // 保存图片信息到数据库（只有管理员才保存）
         let savedImage = null;
         if (isAdmin) {
-            // 获取分类字段
-            const category = fields.category || 'general';
+            // 获取分类字段 - 处理可能的数组格式
+            let category = 'general';
+            if (fields.category) {
+                if (Array.isArray(fields.category)) {
+                    category = fields.category[0] || 'general';
+                } else {
+                    category = fields.category || 'general';
+                }
+            }
+            
+            console.log('Category:', category);
             
             const imageInfo = {
                 filename: imageFile.originalFilename || imageFile.newFilename || 'unknown',
@@ -206,13 +219,16 @@ module.exports = async (req, res) => {
         }
         
         // 返回结果
-        return res.status(200).json({
+        const response = {
             success: true,
             imageUrl: isAdmin ? imageUrl : null, // 只有管理员才能看到图片URL
             fileId: fileId,
             fileSize: file.file_size,
             message: isAdmin ? 'Image uploaded successfully' : 'Image uploaded successfully but URL is only available to administrators'
-        });
+        };
+        
+        console.log('Response:', JSON.stringify(response, null, 2));
+        return res.status(200).json(response);
     } catch (error) {
         // 添加更详细的错误日志
         console.error('Upload error:', error);
