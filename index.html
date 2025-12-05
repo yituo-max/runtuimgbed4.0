@@ -1490,6 +1490,7 @@
                                 <option value="meme">表情包</option>
                                 <option value="other">其他</option>
                             </select>
+                            <button class="btn btn-secondary" id="refreshGalleryBtn" title="强制从服务器刷新图片库">刷新</button>
                             <button class="btn btn-primary" id="addFolderBtn">新建文件夹</button>
                         </div>
                     </div>
@@ -1910,8 +1911,17 @@
                 function init() {
                     // 从本地存储加载数据
                     loadDataFromStorage();
-                    // 渲染图片库
-                    renderGallery();
+                    
+                    // 从服务器获取最新数据（异步执行，不阻塞初始化）
+                    loadDataFromServer().then(() => {
+                        // 数据加载完成后渲染图片库
+                        renderGallery();
+                    }).catch(error => {
+                        console.error('初始化时从服务器获取数据失败:', error);
+                        // 即使服务器数据获取失败，也使用本地数据渲染图片库
+                        renderGallery();
+                    });
+                    
                     // 渲染分类列表
                     renderCategories();
                     
@@ -1971,6 +1981,67 @@
                 }
                 }
 
+                // 从服务器获取图片数据
+                async function loadDataFromServer(forceRefresh = false) {
+                    try {
+                        // 检查缓存是否过期（默认30分钟）
+                        const cacheTimestamp = localStorage.getItem('imageGalleryCacheTimestamp');
+                        const currentTime = new Date().getTime();
+                        const cacheExpiryTime = 30 * 60 * 1000; // 30分钟
+                        
+                        // 如果不强制刷新且缓存未过期，则直接返回
+                        if (!forceRefresh && cacheTimestamp && (currentTime - parseInt(cacheTimestamp) < cacheExpiryTime)) {
+                            console.log('使用缓存数据，缓存未过期');
+                            return;
+                        }
+                        
+                        console.log('从服务器获取最新图片数据...');
+                        showNotification('正在同步服务器数据...', 'info');
+                        
+                        // 调用API获取图片列表
+                        const response = await fetch('/api/images-list');
+                        
+                        if (!response.ok) {
+                            throw new Error(`服务器响应错误: ${response.status}`);
+                        }
+                        
+                        const data = await response.json();
+                        
+                        if (data.success && data.images) {
+                            // 更新本地数据
+                            imageGallery = data.images;
+                            
+                            // 如果服务器有更新的分类，也更新分类数据
+                            if (data.categories && data.categories.length > 0) {
+                                categories = data.categories;
+                                updateCategorySelects();
+                            }
+                            
+                            // 保存到本地存储
+                            saveDataToStorage();
+                            
+                            // 更新缓存时间戳
+                            localStorage.setItem('imageGalleryCacheTimestamp', currentTime.toString());
+                            
+                            // 刷新图片库显示
+                            renderGallery();
+                            
+                            console.log(`成功从服务器获取 ${data.images.length} 张图片`);
+                            showNotification(`已同步 ${data.images.length} 张图片`, 'success');
+                        } else {
+                            throw new Error('服务器返回的数据格式不正确');
+                        }
+                    } catch (error) {
+                        console.error('从服务器获取数据失败:', error);
+                        showNotification('同步服务器数据失败: ' + error.message, 'error');
+                        
+                        // 如果是首次加载且本地没有数据，显示空状态
+                        if (imageGallery.length === 0) {
+                            renderGallery();
+                        }
+                    }
+                }
+
                 // 保存数据到本地存储
                 function saveDataToStorage() {
                     localStorage.setItem('imageGallery', JSON.stringify(imageGallery));
@@ -2014,9 +2085,26 @@
                         const tabId = this.getAttribute('data-tab') + '-tab';
                         document.getElementById(tabId).classList.add('active');
                         
-                        // 如果切换到图片库，刷新图片库
+                        // 如果切换到图片库，检查缓存并更新数据
                         if (this.getAttribute('data-tab') === 'gallery') {
-                            renderGallery();
+                            // 检查缓存是否过期，如果过期则从服务器获取最新数据
+                            const cacheTimestamp = localStorage.getItem('imageGalleryCacheTimestamp');
+                            const currentTime = new Date().getTime();
+                            const cacheExpiryTime = 30 * 60 * 1000; // 30分钟
+                            
+                            if (!cacheTimestamp || (currentTime - parseInt(cacheTimestamp) >= cacheExpiryTime)) {
+                                // 缓存已过期，从服务器获取最新数据
+                                loadDataFromServer().then(() => {
+                                    renderGallery();
+                                }).catch(error => {
+                                    console.error('切换到图片库时获取数据失败:', error);
+                                    // 即使获取失败，也使用本地数据渲染图片库
+                                    renderGallery();
+                                });
+                            } else {
+                                // 缓存未过期，直接渲染图片库
+                                renderGallery();
+                            }
                         }
                         // 如果切换到分类管理，刷新分类列表
                         else if (this.getAttribute('data-tab') === 'categories') {
@@ -2050,6 +2138,26 @@
                             console.error('API Test Error:', error);
                         });
                 });
+
+                // 刷新图片库按钮事件
+                const refreshGalleryBtn = document.getElementById('refreshGalleryBtn');
+                if (refreshGalleryBtn) {
+                    refreshGalleryBtn.addEventListener('click', function() {
+                        // 显示加载提示
+                        showNotification('正在从服务器获取最新数据...', 'info');
+                        
+                        // 清除缓存时间戳，强制从服务器获取数据
+                        localStorage.removeItem('imageGalleryCacheTimestamp');
+                        
+                        // 从服务器获取最新数据
+                        loadDataFromServer().then(() => {
+                            showNotification('图片库已更新到最新状态', 'success');
+                        }).catch(error => {
+                            console.error('强制刷新图片库失败:', error);
+                            showNotification('刷新失败: ' + error.message, 'error');
+                        });
+                    });
+                }
 
                 // 点击拖放区域触发文件选择
                 dropZone.addEventListener('click', function(e) {
