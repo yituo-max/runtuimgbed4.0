@@ -37,6 +37,18 @@
             font-size: 14px;
         }
 
+        /* 初始隐藏登录页面和主页面，避免闪烁 */
+        #loginPage, #mainPage {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        #loginPage.show, #mainPage.show {
+            visibility: visible;
+            opacity: 1;
+        }
+
         .app-container {
             min-height: 100vh;
             display: flex;
@@ -1448,6 +1460,10 @@
             const loginError = document.getElementById('loginError');
             const adminName = document.getElementById('adminName');
             
+            // 初始时隐藏两个页面，避免闪烁
+            loginPage.style.display = 'none';
+            mainPage.style.display = 'none';
+            
             // 检查是否已登录
             function checkAuthStatus() {
                 if (adminToken) {
@@ -1466,12 +1482,12 @@
                         return response.json();
                     })
                     .then(data => {
-                        if (data.success) {
+                        if (data.valid) {
                             // 检查token是否即将过期（剩余时间少于2小时）
-                            const user = data.user;
-                            if (user && user.exp) {
+                            const payload = data.payload;
+                            if (payload && payload.exp) {
                                 const now = Math.floor(Date.now() / 1000);
-                                const timeUntilExpiry = user.exp - now;
+                                const timeUntilExpiry = payload.exp - now;
                                 
                                 // 如果token在2小时内过期，显示警告
                                 if (timeUntilExpiry < 7200) {
@@ -1483,7 +1499,7 @@
                             
                             showMainPage();
                         } else {
-                            console.error('Token验证失败:', data.message);
+                            console.error('Token验证失败:', data.error);
                             logout();
                         }
                     })
@@ -1496,8 +1512,13 @@
                         } else {
                             logout();
                         }
+                    })
+                    .finally(() => {
+                        // 无论验证结果如何，都显示相应的页面
+                        // 这确保了即使在验证失败的情况下也不会停留在空白页面
                     });
                 } else {
+                    // 没有token，直接显示登录页面
                     showLoginPage();
                 }
             }
@@ -1506,6 +1527,10 @@
             function showLoginPage() {
                 loginPage.style.display = 'block';
                 mainPage.style.display = 'none';
+                
+                // 添加显示类以触发过渡效果
+                loginPage.classList.add('show');
+                mainPage.classList.remove('show');
             }
             
             // 显示主页面
@@ -1514,6 +1539,11 @@
                 mainPage.style.display = 'block';
                 adminName.textContent = adminUsername || '管理员';
                 initApp();
+                
+                // 添加显示类以触发过渡效果
+                mainPage.classList.add('show');
+                loginPage.classList.remove('show');
+                
                 // 刷新界面以显示管理员功能
                 setTimeout(() => {
                     renderGallery();
@@ -2804,8 +2834,11 @@
                 init();
             } // initApp函数结束
             
-            // 检查是否已登录
-            checkAuthStatus();
+            // 在所有函数定义完成后，检查是否已登录
+            // 添加一个短暂延迟，确保所有元素都已完全加载
+            setTimeout(() => {
+                checkAuthStatus();
+            }, 100);
         }); // DOMContentLoaded事件监听器结束
     </script>
 </body>
