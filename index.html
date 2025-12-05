@@ -2000,50 +2000,70 @@
                         
                         // 添加时间戳参数防止浏览器缓存
                         const timestamp = new Date().getTime();
-                        // 设置较大的limit值以获取所有图片
-                        const apiUrl = `/api/images-list?t=${timestamp}&limit=1000`;
                         
-                        // 调用API获取图片列表
-                        const response = await fetch(apiUrl);
+                        // 设置limit为100（API允许的最大值）
+                        const limit = 100;
+                        let allImages = [];
+                        let page = 1;
+                        let hasMoreImages = true;
                         
-                        if (!response.ok) {
-                            throw new Error(`服务器响应错误: ${response.status}`);
-                        }
-                        
-                        const data = await response.json();
-                        
-                        // 添加详细的日志输出，帮助调试
-                        console.log('服务器返回的数据:', data);
-                        console.log('数据类型:', typeof data);
-                        console.log('是否有success字段:', 'success' in data);
-                        console.log('success字段值:', data.success);
-                        console.log('是否有images字段:', 'images' in data);
-                        console.log('images字段值:', data.images);
-                        
-                        if (data.success && data.images) {
-                            // 更新本地数据
-                            imageGallery = data.images;
+                        // 循环获取所有页面的图片
+                        while (hasMoreImages) {
+                            const apiUrl = `/api/images-list?t=${timestamp}&limit=${limit}&page=${page}`;
                             
-                            // 如果服务器有更新的分类，也更新分类数据
-                            if (data.categories && data.categories.length > 0) {
-                                categories = data.categories;
-                                updateCategorySelects();
+                            // 调用API获取图片列表
+                            const response = await fetch(apiUrl);
+                            
+                            if (!response.ok) {
+                                throw new Error(`服务器响应错误: ${response.status}`);
                             }
                             
-                            // 保存到本地存储
-                            saveDataToStorage();
+                            const data = await response.json();
                             
-                            // 更新缓存时间戳
-                            localStorage.setItem('imageGalleryCacheTimestamp', currentTime.toString());
+                            // 添加详细的日志输出，帮助调试
+                            console.log(`第${page}页服务器返回的数据:`, data);
+                            console.log('数据类型:', typeof data);
+                            console.log('是否有success字段:', 'success' in data);
+                            console.log('success字段值:', data.success);
+                            console.log('是否有images字段:', 'images' in data);
+                            console.log('images字段值:', data.images);
+                            console.log('pagination:', data.pagination);
                             
-                            // 刷新图片库显示
-                            renderGallery();
-                            
-                            console.log(`成功从服务器获取 ${data.images.length} 张图片`);
-                            showNotification(`已同步 ${data.images.length} 张图片`, 'success');
-                        } else {
-                            throw new Error('服务器返回的数据格式不正确');
+                            if (data.success && data.images) {
+                                // 将当前页的图片添加到总列表中
+                                allImages = allImages.concat(data.images);
+                                
+                                // 检查是否还有更多页面
+                                if (data.pagination && data.pagination.page < data.pagination.pages) {
+                                    page++;
+                                } else {
+                                    hasMoreImages = false;
+                                }
+                            } else {
+                                throw new Error('服务器返回的数据格式不正确');
+                            }
                         }
+                        
+                        // 更新本地数据
+                        imageGallery = allImages;
+                        
+                        // 如果服务器有更新的分类，也更新分类数据
+                        if (data.categories && data.categories.length > 0) {
+                            categories = data.categories;
+                            updateCategorySelects();
+                        }
+                        
+                        // 保存到本地存储
+                        saveDataToStorage();
+                        
+                        // 更新缓存时间戳
+                        localStorage.setItem('imageGalleryCacheTimestamp', currentTime.toString());
+                        
+                        // 刷新图片库显示
+                        renderGallery();
+                        
+                        console.log(`成功从服务器获取 ${allImages.length} 张图片`);
+                        showNotification(`已同步 ${allImages.length} 张图片`, 'success');
                     } catch (error) {
                         console.error('从服务器获取数据失败:', error);
                         showNotification('同步服务器数据失败: ' + error.message, 'error');
