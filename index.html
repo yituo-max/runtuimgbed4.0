@@ -513,7 +513,7 @@
 
         /* 预览容器 */
         .preview-container {
-            position: absolute;
+            position: relative;
             top: 0;
             left: 0;
             width: 100%;
@@ -524,8 +524,7 @@
             align-items: center;
             background-color: rgba(0, 0, 0, 0.7);
             border-radius: 8px;
-            z-index: 5;
-            pointer-events: none;
+            cursor: pointer;
         }
 
         .preview-image {
@@ -534,10 +533,7 @@
             border-radius: 4px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             object-fit: contain;
-            z-index: 10;
-            position: relative;
             cursor: pointer;
-            pointer-events: auto;
         }
 
         .preview-info {
