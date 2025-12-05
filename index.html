@@ -1879,6 +1879,14 @@
                     renderGallery();
                     // 渲染分类列表
                     renderCategories();
+                    
+                    // 上传区域预览图片点击事件 - 直接绑定
+                    previewImage.addEventListener('click', function(e) {
+                        e.stopPropagation(); // 阻止事件冒泡，防止触发文件选择
+                        if (this.src && this.src !== '') {
+                            showImagePreview(this.src, '上传预览');
+                        }
+                    });
                 }
 
                 // 从本地存储加载数据
@@ -2982,14 +2990,6 @@
                         if (overlay.classList.contains('show')) {
                             closeImagePreview();
                         }
-                    }
-                });
-                
-                // 上传区域预览图片点击事件 - 直接绑定
-                previewImage.addEventListener('click', function(e) {
-                    e.stopPropagation(); // 阻止事件冒泡，防止触发文件选择
-                    if (this.src && this.src !== '') {
-                        showImagePreview(this.src, '上传预览');
                     }
                 });
                 
