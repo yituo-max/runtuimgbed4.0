@@ -605,6 +605,12 @@
             margin-bottom: 20px;
             max-height: 400px;
             object-fit: contain;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .result-image:hover {
+            transform: scale(1.02);
         }
 
         .url-container {
@@ -1934,6 +1940,14 @@
                         e.stopPropagation();
                         previewImage.src = '';
                         previewContainer.style.display = 'none';
+                    });
+                    
+                    // 结果图片点击事件 - 添加放大预览功能
+                    resultImage.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (this.src && this.src !== '') {
+                            showImagePreview(this.src, '上传结果');
+                        }
                     });
                 }
 
