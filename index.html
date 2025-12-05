@@ -2000,7 +2000,8 @@
                         
                         // 添加时间戳参数防止浏览器缓存
                         const timestamp = new Date().getTime();
-                        const apiUrl = `/api/images-list?t=${timestamp}`;
+                        // 设置较大的limit值以获取所有图片
+                        const apiUrl = `/api/images-list?t=${timestamp}&limit=1000`;
                         
                         // 调用API获取图片列表
                         const response = await fetch(apiUrl);
