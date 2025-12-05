@@ -33,7 +33,7 @@ module.exports = async (req, res) => {
         }
         
         // 获取图片信息
-        const image = getImage(imageId);
+        const image = await getImage(imageId);
         
         if (!image) {
             return res.status(404).json({ error: 'Image not found' });
@@ -55,7 +55,7 @@ module.exports = async (req, res) => {
         
         // 处理DELETE请求 - 删除图片
         if (req.method === 'DELETE') {
-            const deletedImage = deleteImage(imageId);
+            const deletedImage = await deleteImage(imageId);
             
             if (!deletedImage) {
                 return res.status(404).json({ error: 'Image not found' });

@@ -60,7 +60,7 @@ module.exports = async (req, res) => {
             
             // 获取统计信息
             if (req.query.stats === 'true') {
-                const stats = getStats();
+                const stats = await getStats();
                 return res.status(200).json({
                     success: true,
                     stats

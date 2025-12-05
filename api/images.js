@@ -35,7 +35,7 @@ module.exports = async (req, res) => {
         if (req.method === 'GET') {
             // 检查是否有id参数，如果有则返回单个图片
             if (req.query.id) {
-                const image = getImage(req.query.id);
+                const image = await getImage(req.query.id);
                 if (!image) {
                     return res.status(404).json({ error: 'Image not found' });
                 }
@@ -57,10 +57,10 @@ module.exports = async (req, res) => {
             }
             
             // 获取图片列表
-            const { images, total } = getImages(page, limit, category);
+            const { images, total } = await getImages(page, limit, category);
             
             // 获取所有分类
-            const categories = getCategories();
+            const categories = await getCategories();
             
             return res.status(200).json({
                 success: true,
@@ -83,7 +83,7 @@ module.exports = async (req, res) => {
                 return res.status(400).json({ error: 'URL and filename are required' });
             }
             
-            const newImage = addImage({
+            const newImage = await addImage({
                 url,
                 filename,
                 category: category || 'uncategorized',
@@ -106,7 +106,7 @@ module.exports = async (req, res) => {
                 return res.status(400).json({ error: 'Image ID is required' });
             }
             
-            const updatedImage = updateImage(id, {
+            const updatedImage = await updateImage(id, {
                 url,
                 filename,
                 category,
@@ -132,7 +132,7 @@ module.exports = async (req, res) => {
                 return res.status(400).json({ error: 'Image ID is required' });
             }
             
-            const deletedImage = deleteImage(id);
+            const deletedImage = await deleteImage(id);
             
             if (!deletedImage) {
                 return res.status(404).json({ error: 'Image not found' });

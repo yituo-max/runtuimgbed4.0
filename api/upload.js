@@ -1,7 +1,7 @@
 const https = require('https');
 const querystring = require('querystring');
 const { verifyAdminToken } = require('./auth-middleware');
-const { addImage } = require('./images');
+const { addImage } = require('./kv-database');
 const { IncomingForm } = require('formidable');
 
 // 从环境变量获取配置
