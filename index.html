@@ -1391,7 +1391,7 @@
                         
                         <!-- 图片预览容器 -->
                         <div class="preview-container" id="previewContainer" style="display: none;">
-                            <img id="previewImage" class="preview-image" alt="预览图片">
+                            <img id="previewImage" class="preview-image" alt="预览图片" style="cursor: pointer;">
                         </div>
                     </div>
 
@@ -1981,8 +1981,10 @@
 
                 // 点击拖放区域触发文件选择
                 dropZone.addEventListener('click', function(e) {
-                    // 如果点击的是预览容器，不触发文件选择
-                    if (e.target === previewContainer || previewContainer.contains(e.target)) {
+                    // 如果点击的是预览容器或预览图片，不触发文件选择
+                    if (e.target === previewContainer || 
+                        previewContainer.contains(e.target) || 
+                        e.target === previewImage) {
                         return;
                     }
                     
@@ -2978,6 +2980,14 @@
                         if (overlay.classList.contains('show')) {
                             closeImagePreview();
                         }
+                    }
+                });
+                
+                // 上传区域预览图片点击事件
+                previewImage.addEventListener('click', function(e) {
+                    e.stopPropagation(); // 阻止事件冒泡，防止触发文件选择
+                    if (this.src && this.src !== '') {
+                        showImagePreview(this.src, '上传预览');
                     }
                 });
                 
