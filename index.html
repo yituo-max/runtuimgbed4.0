@@ -1432,6 +1432,7 @@
         // 全局变量
         let adminToken = localStorage.getItem('adminToken');
         let adminUsername = localStorage.getItem('adminUsername');
+        let tokenRefreshTimer = null; // 用于存储token刷新定时器
         
         // 全局函数
         let showNotification, renderGallery, renderCategories;
@@ -1460,20 +1461,41 @@
                     })
                     .then(response => {
                         if (!response.ok) {
-                            throw new Error('Token验证失败');
+                            throw new Error(`HTTP error! status: ${response.status}`);
                         }
                         return response.json();
                     })
                     .then(data => {
                         if (data.success) {
+                            // 检查token是否即将过期（剩余时间少于2小时）
+                            const user = data.user;
+                            if (user && user.exp) {
+                                const now = Math.floor(Date.now() / 1000);
+                                const timeUntilExpiry = user.exp - now;
+                                
+                                // 如果token在2小时内过期，显示警告
+                                if (timeUntilExpiry < 7200) {
+                                    const hours = Math.floor(timeUntilExpiry / 3600);
+                                    const minutes = Math.floor((timeUntilExpiry % 3600) / 60);
+                                    showNotification(`登录状态将在 ${hours}小时${minutes}分钟 后过期`, 'warning');
+                                }
+                            }
+                            
                             showMainPage();
                         } else {
+                            console.error('Token验证失败:', data.message);
                             logout();
                         }
                     })
                     .catch(error => {
                         console.error('Token验证错误:', error);
-                        logout();
+                        // 如果是网络错误，先尝试使用本地存储的token
+                        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                            showNotification('网络连接失败，使用离线模式', 'warning');
+                            showMainPage();
+                        } else {
+                            logout();
+                        }
                     });
                 } else {
                     showLoginPage();
@@ -1497,6 +1519,9 @@
                     renderGallery();
                     renderCategories();
                 }, 100);
+                
+                // 设置token自动刷新
+                setupTokenRefresh();
             }
             
             // 登录处理
@@ -1567,6 +1592,13 @@
                 adminUsername = null;
                 localStorage.removeItem('adminToken');
                 localStorage.removeItem('adminUsername');
+                
+                // 清除token刷新定时器
+                if (tokenRefreshTimer) {
+                    clearInterval(tokenRefreshTimer);
+                    tokenRefreshTimer = null;
+                }
+                
                 showLoginPage();
                 usernameInput.value = '';
                 passwordInput.value = '';
@@ -1576,6 +1608,82 @@
                 }
                 if (typeof renderCategories === 'function') {
                     renderCategories();
+                }
+            }
+            
+            // 设置token自动刷新
+            function setupTokenRefresh() {
+                // 清除之前的定时器
+                if (tokenRefreshTimer) {
+                    clearInterval(tokenRefreshTimer);
+                }
+                
+                // 每2小时检查一次token是否需要刷新
+                tokenRefreshTimer = setInterval(() => {
+                    refreshTokenIfNeeded();
+                }, 2 * 60 * 60 * 1000); // 2小时
+                
+                // 立即检查一次
+                refreshTokenIfNeeded();
+            }
+            
+            // 检查并刷新token
+            async function refreshTokenIfNeeded() {
+                try {
+                    // 检查当前token是否有效
+                    const authResponse = await fetch('/api/auth-check', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${adminToken}`
+                        }
+                    });
+                    
+                    if (!authResponse.ok) {
+                        throw new Error(`HTTP error! status: ${authResponse.status}`);
+                    }
+                    
+                    const authResult = await authResponse.json();
+                    
+                    if (!authResult.valid) {
+                        // Token无效，需要重新登录
+                        showNotification('登录已过期，请重新登录', 'error');
+                        logout();
+                        return;
+                    }
+                    
+                    // 检查token是否即将过期（剩余时间少于4小时）
+                    const tokenPayload = JSON.parse(atob(adminToken.split('.')[1]));
+                    const expirationTime = tokenPayload.exp * 1000; // 转换为毫秒
+                    const currentTime = Date.now();
+                    const timeUntilExpiration = expirationTime - currentTime;
+                    
+                    // 如果token在4小时内过期，则刷新token
+                    if (timeUntilExpiration < 4 * 60 * 60 * 1000) {
+                        const refreshResponse = await fetch('/api/refresh-token', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${adminToken}`
+                            }
+                        });
+                        
+                        if (refreshResponse.ok) {
+                            const refreshResult = await refreshResponse.json();
+                            if (refreshResult.success) {
+                                // 更新token
+                                adminToken = refreshResult.token;
+                                localStorage.setItem('adminToken', adminToken);
+                                showNotification('登录状态已自动刷新', 'success');
+                            }
+                        } else {
+                            console.error('Token refresh failed');
+                        }
+                    }
+                } catch (error) {
+                    console.error('Token refresh error:', error);
+                    // 网络错误时不强制登出，保持当前状态
+                    showNotification('检查登录状态时出现网络错误，保持当前登录状态', 'warning');
                 }
             }
             
