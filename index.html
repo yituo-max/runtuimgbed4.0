@@ -1998,14 +1998,26 @@
                         console.log('从服务器获取最新图片数据...');
                         showNotification('正在同步服务器数据...', 'info');
                         
+                        // 添加时间戳参数防止浏览器缓存
+                        const timestamp = new Date().getTime();
+                        const apiUrl = `/api/images-list?t=${timestamp}`;
+                        
                         // 调用API获取图片列表
-                        const response = await fetch('/api/images-list');
+                        const response = await fetch(apiUrl);
                         
                         if (!response.ok) {
                             throw new Error(`服务器响应错误: ${response.status}`);
                         }
                         
                         const data = await response.json();
+                        
+                        // 添加详细的日志输出，帮助调试
+                        console.log('服务器返回的数据:', data);
+                        console.log('数据类型:', typeof data);
+                        console.log('是否有success字段:', 'success' in data);
+                        console.log('success字段值:', data.success);
+                        console.log('是否有images字段:', 'images' in data);
+                        console.log('images字段值:', data.images);
                         
                         if (data.success && data.images) {
                             // 更新本地数据
@@ -2149,8 +2161,8 @@
                         // 清除缓存时间戳，强制从服务器获取数据
                         localStorage.removeItem('imageGalleryCacheTimestamp');
                         
-                        // 从服务器获取最新数据
-                        loadDataFromServer().then(() => {
+                        // 从服务器获取最新数据，强制刷新
+                        loadDataFromServer(true).then(() => {
                             showNotification('图片库已更新到最新状态', 'success');
                         }).catch(error => {
                             console.error('强制刷新图片库失败:', error);

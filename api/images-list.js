@@ -8,6 +8,11 @@ module.exports = async (req, res) => {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     
+    // 设置缓存控制头，防止浏览器返回304状态码
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     // 处理预检请求
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
@@ -34,10 +39,10 @@ module.exports = async (req, res) => {
         }
         
         // 获取图片列表
-        const result = getImages(page, limit, category);
+        const result = await getImages(page, limit, category);
         
         // 获取所有分类
-        const categories = getCategories();
+        const categories = await getCategories();
         
         // 返回结果
         return res.status(200).json({
