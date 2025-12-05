@@ -524,7 +524,7 @@
             align-items: center;
             background-color: rgba(0, 0, 0, 0.7);
             border-radius: 8px;
-            cursor: pointer;
+            pointer-events: none; /* 允许点击事件穿透到子元素 */
         }
 
         .preview-image {
@@ -534,6 +534,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             object-fit: contain;
             cursor: pointer;
+            pointer-events: auto; /* 确保图片可以接收点击事件 */
         }
 
         .preview-info {
@@ -2984,14 +2985,11 @@
                     }
                 });
                 
-                // 上传区域预览图片点击事件 - 使用事件委托
-                document.addEventListener('click', function(e) {
-                    // 检查点击的是否是预览图片
-                    if (e.target && e.target.id === 'previewImage') {
-                        e.stopPropagation(); // 阻止事件冒泡，防止触发文件选择
-                        if (e.target.src && e.target.src !== '') {
-                            showImagePreview(e.target.src, '上传预览');
-                        }
+                // 上传区域预览图片点击事件 - 直接绑定
+                previewImage.addEventListener('click', function(e) {
+                    e.stopPropagation(); // 阻止事件冒泡，防止触发文件选择
+                    if (this.src && this.src !== '') {
+                        showImagePreview(this.src, '上传预览');
                     }
                 });
                 
