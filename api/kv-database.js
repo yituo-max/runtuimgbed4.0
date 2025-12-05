@@ -87,6 +87,37 @@ async function getImage(id) {
   }
 }
 
+// 根据fileId获取图片
+async function getImageByFileId(fileId) {
+  try {
+    // 获取所有图片ID
+    const imageIds = await kv.zrange('imgbed:images', 0, -1);
+    
+    if (!imageIds || imageIds.length === 0) {
+      return null;
+    }
+
+    // 批量获取图片数据
+    const imageKeys = imageIds.map(id => `${IMAGE_KEY_PREFIX}${id}`);
+    const imagesData = await kv.mget(imageKeys);
+    
+    // 查找匹配fileId的图片
+    for (const imgData of imagesData) {
+      if (imgData) {
+        const image = typeof imgData === 'string' ? JSON.parse(imgData) : imgData;
+        if (image.fileId === fileId) {
+          return image;
+        }
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting image by fileId:', error);
+    return null;
+  }
+}
+
 // 添加新图片
 async function addImage(imageData) {
   try {
@@ -223,6 +254,7 @@ async function getStats() {
 module.exports = {
   getImages,
   getImage,
+  getImageByFileId,
   addImage,
   updateImage,
   deleteImage,

@@ -2006,6 +2006,7 @@
                         let allImages = [];
                         let page = 1;
                         let hasMoreImages = true;
+                        let lastResponseData = null; // 用于保存最后一次响应的数据
                         
                         // 循环获取所有页面的图片
                         while (hasMoreImages) {
@@ -2019,6 +2020,7 @@
                             }
                             
                             const data = await response.json();
+                            lastResponseData = data; // 保存最后一次响应的数据
                             
                             // 添加详细的日志输出，帮助调试
                             console.log(`第${page}页服务器返回的数据:`, data);
@@ -2048,8 +2050,8 @@
                         imageGallery = allImages;
                         
                         // 如果服务器有更新的分类，也更新分类数据
-                        if (data.categories && data.categories.length > 0) {
-                            categories = data.categories;
+                        if (lastResponseData && lastResponseData.categories && lastResponseData.categories.length > 0) {
+                            categories = lastResponseData.categories;
                             updateCategorySelects();
                         }
                         
