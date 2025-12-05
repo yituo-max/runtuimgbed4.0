@@ -23,14 +23,14 @@ module.exports = async (req, res) => {
     
     if (authResult.valid) {
       return res.status(200).json({ 
-        success: true, 
+        valid: true, 
         message: '令牌有效',
-        user: authResult.payload 
+        payload: authResult.payload 
       });
     } else {
       return res.status(401).json({ 
-        success: false, 
-        message: authResult.error || '令牌无效' 
+        valid: false, 
+        error: authResult.error || '令牌无效' 
       });
     }
   } catch (error) {
