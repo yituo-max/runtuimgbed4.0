@@ -1,5 +1,5 @@
 const { verifyAdminToken } = require('./auth-middleware');
-const { getImage, deleteImage } = require('./images');
+const { getImage, deleteImage } = require('./kv-database');
 
 module.exports = async (req, res) => {
     // 设置CORS头
@@ -41,6 +41,12 @@ module.exports = async (req, res) => {
         
         // 处理GET请求 - 获取图片信息
         if (req.method === 'GET') {
+            // 检查是否有serve参数，如果有则重定向到图片URL
+            if (req.query.serve === 'true') {
+                // 重定向到实际的图片URL
+                return res.redirect(302, image.url);
+            }
+            
             return res.status(200).json({
                 success: true,
                 image

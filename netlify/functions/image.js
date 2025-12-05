@@ -1,5 +1,5 @@
 const { verifyAdminToken } = require('./auth-middleware');
-const { getImage, deleteImage } = require('./images');
+const { getImage, deleteImage } = require('./kv-database');
 
 exports.handler = async function(event, context) {
     // 设置CORS头
@@ -38,9 +38,9 @@ exports.handler = async function(event, context) {
     }
     
     try {
-        // 从路径参数获取图片ID
-        const pathParts = event.path.split('/');
-        const imageId = pathParts[pathParts.length - 1];
+        // 从查询参数获取图片ID
+        const queryStringParameters = event.queryStringParameters || {};
+        const imageId = queryStringParameters.id;
         
         if (!imageId) {
             return {
@@ -63,6 +63,17 @@ exports.handler = async function(event, context) {
         
         // 处理GET请求 - 获取图片信息
         if (event.httpMethod === 'GET') {
+            // 检查是否有serve参数，如果有则重定向到图片URL
+            if (queryStringParameters.serve === 'true') {
+                return {
+                    statusCode: 302,
+                    headers: {
+                        ...headers,
+                        'Location': image.url
+                    }
+                };
+            }
+            
             return {
                 statusCode: 200,
                 headers,
